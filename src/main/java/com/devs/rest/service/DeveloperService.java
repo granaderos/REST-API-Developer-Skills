@@ -1,6 +1,7 @@
 package com.devs.rest.service;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
@@ -68,10 +69,10 @@ public class DeveloperService {
 	public String addSkillAssessment(SkillAssessment skillAss) {
 		StringBuffer message = new StringBuffer();
 		
-		if(!devDao.isDeveloperIdExisting(skillAss.getDeveloperId())) {
+		if(!devDao.isDeveloperIdExisting(skillAss.getDeveloper().getDeveloperId())) {
 			message.append("Unrecognised developer ID.\n");
 		}
-		if(!skillDao.isSkillIdExisting(skillAss.getSkillId())) {
+		if(!skillDao.isSkillIdExisting(skillAss.getSkill().getSkillId())) {
 			message.append("Unrecognised skill ID.\n");
 		}
 		
@@ -84,7 +85,30 @@ public class DeveloperService {
 		return message.toString();
 	}
 	
-	public List<SkillAssessment> searchDevelopers(
+	public String updateSkillAssessment(SkillAssessment skillAss) {
+		StringBuffer message = new StringBuffer();
+		
+		if(!devDao.isDeveloperIdExisting(skillAss.getDeveloper().getDeveloperId())) {
+			message.append("Unrecognised developer ID.\n");
+		}
+		if(!skillDao.isSkillIdExisting(skillAss.getSkill().getSkillId())) {
+			message.append("Unrecognised skill ID.\n");
+		}
+		
+		if(message.length() <= 0) {
+			Boolean updated = devDao.updateSkillAssessment(skillAss);
+			if(updated) message.append("Skill assessment has been successfuly updated.");
+			else message.append("Something went wrong. Couldn't update skill assessment.");
+		}
+		
+		return message.toString();
+	}
+	
+	public List<HashMap<String, Object>> getDevelopers() {
+		return devDao.getDevelopers();
+	}
+	
+	public List<HashMap<String, Object>> searchDevelopers(
 			String skill, 
 			String skillLevel, 
 			String firstName,
@@ -96,7 +120,7 @@ public class DeveloperService {
 		firstName = createSearchValue(firstName);
 		lastName = createSearchValue(lastName);
 		
-		List<SkillAssessment> results;
+		List<HashMap<String, Object>> results;
 		
 		System.out.println("VALLLLLLLLL = " + StringUtils.isBlank(String.valueOf(monthsOfExperience)));
 		if(StringUtils.isBlank(monthsOfExperience)) {

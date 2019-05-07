@@ -1,5 +1,8 @@
 package com.devs.rest.service;
 
+import java.util.HashMap;
+import java.util.List;
+
 import com.devs.rest.dao.SkillDao;
 import com.devs.rest.domain.Skill;
 
@@ -24,7 +27,18 @@ public class SkillService {
 			if(added) message.append("New skill has been successfully added.");
 			else message.append("Something went wrong. Couldn't add new skill");
 		}
-		
 		return message.toString();
+	}
+	
+	public List<Skill> getSkills() {
+		return skillDao.getSkills();
+	}
+	
+	public List<String> getSkillLevels() {
+		return skillDao.getSkillLevels();
+	}
+	
+	public List<HashMap<String, Object>> generateSkillCapabilityReport() {
+		return skillDao.generateSkillCapabilityReport();
 	}
 }

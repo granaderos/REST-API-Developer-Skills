@@ -1,5 +1,6 @@
 package com.devs.rest.controller;
 
+import java.util.HashMap;
 import java.util.List;
 
 import javax.ws.rs.Consumes;
@@ -24,14 +25,15 @@ public class DeveloperController {
 	}
 	
 	@GET
-	public String getDevelopers() {
-		return "Devsss";
+	@Produces(MediaType.APPLICATION_JSON)
+	public List<HashMap<String, Object>> getDevelopers() {
+		return devService.getDevelopers();
 	}
 	
 	@GET
 	@Path("/search")
 	@Produces(MediaType.APPLICATION_JSON)
-	public List<SkillAssessment> searchDevelopers(
+	public List<HashMap<String, Object>> searchDevelopers(
 			@QueryParam("skill") String skill, 
 			@QueryParam("skillLevel") String skillLevel,
 			@QueryParam("firstName") String firstName, 

@@ -15,7 +15,6 @@ public class DatabaseConnection {
 		try {
 			Class.forName("org.mariadb.jdbc.Driver");
 			connection = DriverManager.getConnection("jdbc:mariadb://"+host+":"+port+"/"+dbname, username, password);
-			System.out.println("Connected to the datanase.");
 		} catch(Exception e) {
 			e.printStackTrace();
 		}

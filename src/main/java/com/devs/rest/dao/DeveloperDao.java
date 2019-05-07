@@ -5,18 +5,20 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import com.devs.rest.domain.Developer;
 import com.devs.rest.domain.Skill;
 import com.devs.rest.domain.SkillAssessment;
-import com.devs.rest.domain.Song;
 
 public class DeveloperDao {
 	DatabaseConnection dbConnection;
+	SkillDao skillDao;
 	
 	public DeveloperDao() {
 		dbConnection = new DatabaseConnection();
+		skillDao = new SkillDao();
 	}
 	
 	public boolean addDeveloper(Developer dev) {
@@ -40,6 +42,63 @@ public class DeveloperDao {
 		}
 
 		return added;
+	}
+	
+	public List<HashMap<String, Object>> getDevelopers() {
+		List<HashMap<String, Object>> listDevs = new ArrayList<HashMap<String, Object>>();
+		String sql = "SELECT * FROM developers";
+
+		try (Connection conn = dbConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+
+			ResultSet rs = ps.executeQuery();
+			Developer dev = null;
+			while (rs.next()) {
+				dev = new Developer();
+				dev.setDeveloperId(rs.getInt("developerId"));
+				dev.setFirstName(rs.getString("firstName"));
+				dev.setMiddleName(rs.getString("middleName"));
+				dev.setLastName(rs.getString("lastName"));
+				dev.setBirthDate(rs.getDate("birthDate"));
+				dev.setPosition(rs.getString("position"));
+				
+				String skillSql = "SELECT s.*, sl.level, sa.monthsOfExperience FROM skills s, skill_assessments sa, skill_levels sl "
+						+ " WHERE s.skillId = sa.skillId AND sl.skillLevelId = sa.skillLevelId AND sa.developerId = ? "
+						+ " GROUP BY sa.skillId";
+				
+				try (Connection conn2 = dbConnection.getConnection(); PreparedStatement psSkills = conn.prepareStatement(skillSql)) {
+					psSkills.setInt(1, rs.getInt("developerId"));
+					ResultSet rsSkills = psSkills.executeQuery();
+					
+					
+					List<HashMap<String, Object>> listSkills = new ArrayList<HashMap<String, Object>>();
+					
+					
+					while(rsSkills.next()) {
+						HashMap<String, Object> skill = new HashMap<String, Object>();
+						
+						skill.put("skillId", rsSkills.getInt("skillId"));
+						skill.put("skill", rsSkills.getString("skill"));
+						skill.put("skillLevel", rsSkills.getString("level"));
+						skill.put("monthsOfExperience", rsSkills.getInt("monthsOfExperience"));
+						
+						listSkills.add(skill);
+					}
+					
+					HashMap<String, Object> devData = new HashMap<String, Object>();
+					devData.put("developer", dev);
+					devData.put("skills", listSkills);
+					listDevs.add(devData);
+				} catch(SQLException e) {
+					e.printStackTrace();
+					throw new RuntimeException(e);
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+
+		return listDevs;
 	}
 	
 	public boolean isDeveloperIdExisting(int developerId) {
@@ -72,10 +131,10 @@ public class DeveloperDao {
 		String sql = "INSERT INTO skill_assessments VALUES (null, ?, ?, ?, ?)";
 
 		try (Connection connection = dbConnection.getConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
-			ps.setInt(1, skillAss.getDeveloperId());
-			ps.setInt(2, skillAss.getSkillId());
+			ps.setInt(1, skillAss.getDeveloper().getDeveloperId());
+			ps.setInt(2, skillAss.getSkill().getSkillId());
 			ps.setInt(3, skillAss.getMonthsOfExperience());
-			ps.setInt(4, getSkillLevelId(skillAss.getSkillLevel()));
+			ps.setInt(4, skillDao.getSkillLevelId(skillAss.getSkillLevel()));
 			ps.executeUpdate();
 			
 			added = true;
@@ -87,46 +146,45 @@ public class DeveloperDao {
 		return added;
 	}
 	
-	public int getSkillLevelId(String skillLevel) {
-		int skillLevelId = -1;
-		String sql = "SELECT skillLevelId FROM skill_levels WHERE level = ?";
+	public boolean updateSkillAssessment(SkillAssessment skillAss) {
+		boolean updated = false;
 		
-		try (Connection conn = dbConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-			ps.setString(1, skillLevel);
+		String sql = "UPDATE skill_assessments SET monthsOfExperience = ?, skillLevelId = ? WHERE skillId = ? AND developerId = ?";
+
+		try (Connection connection = dbConnection.getConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
+			ps.setInt(1, skillAss.getMonthsOfExperience());
+			ps.setInt(2, skillDao.getSkillLevelId(skillAss.getSkillLevel()));
+			ps.setInt(3, skillAss.getSkill().getSkillId());
+			ps.setInt(4, skillAss.getDeveloper().getDeveloperId());
+			ps.executeUpdate();
 			
-			ResultSet rs = ps.executeQuery();
-			while(rs.next()) {
-				skillLevelId = rs.getInt("skillLevelId");
-			}
+			updated = true;
 		} catch (SQLException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
-		return skillLevelId;
 		
+		return updated;
 	}
 	
-	public List<SkillAssessment> searchDevelopers(String skill, String skillLevel, String firstName, String lastName) {
-		List<SkillAssessment> skillAsss = new ArrayList<>();
+	public List<HashMap<String, Object>> searchDevelopers(String skill, String skillLevel, String firstName, String lastName) {
+		List<HashMap<String, Object>> listDevs = new ArrayList<HashMap<String, Object>>();
 		System.out.println("skill = " + skill + " skillLevel = " + skillLevel + " firstName = " + firstName + " lastName = " + lastName);
 		String sql = "SELECT d.*, s.*, sa.*, sl.* FROM developers d, skills s, skill_assessments sa, skill_levels sl "
 				+ " WHERE s.skill LIKE ? AND s.skillId = sa.skillId AND sl.level LIKE ? AND sl.skillLevelId = sa.skillLevelId "
 				+ " AND d.firstName LIKE ? AND d.lastName LIKE ? AND d.developerId = sa.developerId "
 				+ " GROUP BY d.developerId";
 
-		System.out.println("QUERY = " + sql);
-
+		
 		try (Connection conn = dbConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
 			ps.setString(1, skill);
 			ps.setString(2, skillLevel);
 			ps.setString(3, firstName);
 			ps.setString(4, lastName);
-//			
+
 			ResultSet rs = ps.executeQuery();
 			Developer dev = null;
-			Skill skillObj = null;
-			SkillAssessment skillAss = null;
 			while (rs.next()) {
 				dev = new Developer();
 				dev.setDeveloperId(rs.getInt("developerId"));
@@ -136,41 +194,50 @@ public class DeveloperDao {
 				dev.setBirthDate(rs.getDate("birthDate"));
 				dev.setPosition(rs.getString("position"));
 				
-				String skillSql = "SELECT s.* FROM skills s, skill_assessments sa "
-						+ " WHERE s.skillId = sa.skillId AND sa.developerId = ? "
+				String skillSql = "SELECT s.*, sl.level, sa.monthsOfExperience FROM skills s, skill_assessments sa, skill_levels sl "
+						+ " WHERE s.skillId = sa.skillId AND sl.skillLevelId = sa.skillLevelId AND sa.developerId = ? "
 						+ " GROUP BY sa.skillId";
-				PreparedStatement psSkills = conn.prepareStatement(skillSql);
-				psSkills.setInt(1, rs.getInt("developerId"));
-				ResultSet rsSkills = psSkills.executeQuery();
 				
-				List<Skill> skills = new ArrayList<Skill>();
+				try (Connection conn2 = dbConnection.getConnection(); PreparedStatement psSkills = conn2.prepareStatement(skillSql)) {
+					psSkills.setInt(1, rs.getInt("developerId"));
+					ResultSet rsSkills = psSkills.executeQuery();
+					
+					
+					List<HashMap<String, Object>> listSkills = new ArrayList<HashMap<String, Object>>();
+					
+					
+					while(rsSkills.next()) {
+						HashMap<String, Object> skillMap = new HashMap<String, Object>();
+						
+						skillMap.put("skillId", rsSkills.getInt("skillId"));
+						skillMap.put("skill", rsSkills.getString("skill"));
+						skillMap.put("skillLevel", rsSkills.getString("level"));
+						skillMap.put("monthsOfExperience", rsSkills.getInt("monthsOfExperience"));
+						
+						listSkills.add(skillMap);
+					}
+					
+					HashMap<String, Object> devData = new HashMap<String, Object>();
+					devData.put("developer", dev);
+					devData.put("skills", listSkills);
+					listDevs.add(devData);
 				
-				while(rsSkills.next()) {
-					skillObj = new Skill();
-					skillObj.setSkillId(rsSkills.getInt("skillId"));
-					skillObj.setSkill(rsSkills.getString("skill"));
-					skills.add(skillObj);
+				} catch(SQLException e) {
+					e.printStackTrace();
+					throw new RuntimeException(e);
 				}
-				
-				skillAss = new SkillAssessment();
-				skillAss.setDeveloper(dev);
-				skillAss.setSkill(skills);
-				skillAss.setMonthsOfExperience(rs.getInt("monthsOfExperience"));
-				skillAss.setSkillLevel(rs.getString("level"));
-				
-				skillAsss.add(skillAss);
 			}
-
+				
 		} catch (SQLException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
 
-		return skillAsss;
+		return listDevs;
 	}
 	
-	public List<SkillAssessment> searchDevelopers(String skill, String skillLevel, String firstName, String lastName, int monthsOfExperience) {
-		List<SkillAssessment> skillAsss = new ArrayList<>();
+	public List<HashMap<String, Object>> searchDevelopers(String skill, String skillLevel, String firstName, String lastName, int monthsOfExperience) {
+		List<HashMap<String, Object>> listDevs = new ArrayList<HashMap<String, Object>>();
 
 		String sql = "SELECT d.*, s.*, sa.*, sl.* FROM developers d, skills s, skill_assessments sa, skill_levels sl "
 				+ " WHERE s.skill LIKE ? AND s.skillId = sa.skillId AND sl.level LIKE ? AND sl.skillLevelId = sa.skillLevelId "
@@ -187,8 +254,6 @@ public class DeveloperDao {
 
 			ResultSet rs = ps.executeQuery();
 			Developer dev = null;
-			Skill skillObj = null;
-			SkillAssessment skillAss = null;
 			while (rs.next()) {
 				dev = new Developer();
 				dev.setDeveloperId(rs.getInt("developerId"));
@@ -198,28 +263,37 @@ public class DeveloperDao {
 				dev.setBirthDate(rs.getDate("birthDate"));
 				dev.setPosition(rs.getString("position"));
 				
-				String skillSql = "SELECT s.skillId, s.skill FROM skills s, skill_assessments sa "
-						+ "WHERE s.skillId = sa.skillId AND sa.developerId = ? GROUP BY s.skillId";
-				PreparedStatement psSkills = conn.prepareStatement(skillSql);
-				psSkills.setInt(1, rs.getInt("developerId"));
-				ResultSet rsSkills = psSkills.executeQuery();
+				String skillSql = "SELECT s.*, sl.level, sa.monthsOfExperience FROM skills s, skill_assessments sa, skill_levels sl "
+						+ " WHERE s.skillId = sa.skillId AND sl.skillLevelId = sa.skillLevelId AND sa.developerId = ? "
+						+ " GROUP BY sa.skillId";
 				
-				List<Skill> skills = new ArrayList<Skill>();
-				
-				while(rsSkills.next()) {
-					skillObj = new Skill();
-					skillObj.setSkillId(rs.getInt("skillId"));
-					skillObj.setSkill(rs.getString("skill"));
-					skills.add(skillObj);
+				try (Connection conn2 = dbConnection.getConnection(); PreparedStatement psSkills = conn2.prepareStatement(skillSql);) {
+					psSkills.setInt(1, rs.getInt("developerId"));
+					ResultSet rsSkills = psSkills.executeQuery();
+					
+					
+					List<HashMap<String, Object>> listSkills = new ArrayList<HashMap<String, Object>>();
+					
+					
+					while(rsSkills.next()) {
+						HashMap<String, Object> skillMap = new HashMap<String, Object>();
+						
+						skillMap.put("skillId", rsSkills.getInt("skillId"));
+						skillMap.put("skill", rsSkills.getString("skill"));
+						skillMap.put("skillLevel", rsSkills.getString("level"));
+						skillMap.put("monthsOfExperience", rsSkills.getInt("monthsOfExperience"));
+						
+						listSkills.add(skillMap);
+					}
+					
+					HashMap<String, Object> devData = new HashMap<String, Object>();
+					devData.put("developer", dev);
+					devData.put("skills", listSkills);
+					listDevs.add(devData);
+				} catch(SQLException e) {
+					e.printStackTrace();
+					throw new RuntimeException(e);
 				}
-				
-				skillAss = new SkillAssessment();
-				skillAss.setDeveloper(dev);
-				skillAss.setSkill(skills);
-				skillAss.setMonthsOfExperience(rs.getInt("monthsOfExperience"));
-				skillAss.setSkillLevel(rs.getString("level"));
-				
-				skillAsss.add(skillAss);
 			}
 
 		} catch (SQLException e) {
@@ -227,6 +301,6 @@ public class DeveloperDao {
 			throw new RuntimeException(e);
 		}
 
-		return skillAsss;
+		return listDevs;
 	}
 }

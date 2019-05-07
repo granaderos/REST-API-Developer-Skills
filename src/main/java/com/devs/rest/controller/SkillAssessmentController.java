@@ -3,6 +3,7 @@ package com.devs.rest.controller;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
@@ -31,6 +32,20 @@ public class SkillAssessmentController {
 
 		try {
 			String message = devService.addSkillAssessment(skillAss);
+			return message;
+		} catch (Exception e) {
+			throw new WebApplicationException(e);
+		}
+
+	}
+	
+	@PUT
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Path("/update")
+	public String updateSkillAssessment(SkillAssessment skillAss) {
+
+		try {
+			String message = devService.updateSkillAssessment(skillAss);
 			return message;
 		} catch (Exception e) {
 			throw new WebApplicationException(e);
