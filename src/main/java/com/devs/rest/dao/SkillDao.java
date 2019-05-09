@@ -37,7 +37,7 @@ public class SkillDao {
 	public List<Skill> getSkills() {
 		List<Skill> skills;
 		
-		String sql = "SELECT * FROM skills";
+		String sql = "SELECT * FROM skills ORDER BY skill";
 
 		try (Connection conn = dbConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
@@ -63,7 +63,7 @@ public class SkillDao {
 		List<HashMap<String, Object>> listSkillData = null;
 		HashMap<String, Object> skillData = null;
 		
-		String sqlSkills = "SELECT * FROM skills";
+		String sqlSkills = "SELECT * FROM skills ORDER BY skill";
 		String sqlLevels = "SELECT * FROM skill_levels ORDER BY skillLevelId";
 		String sqlCount = "SELECT COUNT(1) AS levelCount FROM skill_assessments WHERE skillId = ? AND skillLevelId = ?";
 
@@ -136,7 +136,7 @@ public class SkillDao {
 	public List<String> getSkillLevels() {
 		List<String> skillLevels;
 		
-		String sql = "SELECT * FROM skill_levels";
+		String sql = "SELECT * FROM skill_levels ORDER BY skillLevelId";
 
 		try (Connection conn = dbConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
@@ -152,6 +152,26 @@ public class SkillDao {
 		}
 		
 		return skillLevels;
+	}
+	
+	public boolean skillExists(String skill) {
+		boolean exist = false;
+		
+		String sql = "SELECT * FROM skills WHERE skill = ?";
+
+		try (Connection conn = dbConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+			ps.setString(1, skill);
+			ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				exist = true;
+			}
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+		
+		return exist;
 	}
 	
 	public boolean isSkillIdExisting(int skillId) {

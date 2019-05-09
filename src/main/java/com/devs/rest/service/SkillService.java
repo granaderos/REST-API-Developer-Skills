@@ -20,6 +20,8 @@ public class SkillService {
 		} else if(skill.getSkill().length() < 2 
 				|| skill.getSkill().length() > 255) {
 			message.append("Skill name must be 2 - 255 characters.");
+		} else if(skillDao.skillExists(skill.getSkill())) {
+			message.append(skill.getSkill() + " is already existing.");
 		}
 		
 		if(message.length() <= 0) { // meaning skill name is valid

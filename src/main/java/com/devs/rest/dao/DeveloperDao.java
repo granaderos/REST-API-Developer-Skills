@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import com.devs.rest.domain.Developer;
-import com.devs.rest.domain.Skill;
 import com.devs.rest.domain.SkillAssessment;
 
 public class DeveloperDao {
@@ -46,7 +45,7 @@ public class DeveloperDao {
 	
 	public List<HashMap<String, Object>> getDevelopers() {
 		List<HashMap<String, Object>> listDevs = new ArrayList<HashMap<String, Object>>();
-		String sql = "SELECT * FROM developers";
+		String sql = "SELECT * FROM developers ORDER BY firstName, middleName, lastName";
 
 		try (Connection conn = dbConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
@@ -146,6 +145,32 @@ public class DeveloperDao {
 		return added;
 	}
 	
+	public boolean skillAlreadyExistToDeveloper(int developerId, int skillId) {
+		boolean exist = false;
+		
+		String sql = "SELECT * FROM skill_assessments WHERE developerId = ? AND skillId = ?";
+
+		try (Connection conn = dbConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+
+			ps.setInt(1, developerId);
+			ps.setInt(2, skillId);
+			
+			ResultSet results = ps.executeQuery();
+
+			while (results.next()) {
+				exist = true;
+				break;
+			}
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+		
+		
+		return exist;
+	}
+	
 	public boolean updateSkillAssessment(SkillAssessment skillAss) {
 		boolean updated = false;
 		
@@ -174,6 +199,7 @@ public class DeveloperDao {
 				+ " WHERE s.skill LIKE ? AND s.skillId = sa.skillId AND sl.level LIKE ? AND sl.skillLevelId = sa.skillLevelId "
 				+ " AND d.firstName LIKE ? AND d.lastName LIKE ? AND d.developerId = sa.developerId "
 				+ " GROUP BY d.developerId";
+		System.out.println("SQL = " + sql);
 
 		
 		try (Connection conn = dbConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {

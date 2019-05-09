@@ -1,5 +1,7 @@
 package com.devs.rest.service;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -48,6 +50,10 @@ public class DeveloperService {
 			message.append("Position can only be 2 - 255 characters.");
 		}
 		
+		if(dev.getBirthDate() == null || isThisDateValid(dev.getBirthDate().toString(), "yyyy-mm-dd")) {
+			message.append("Please provide a valid birth date.\n");
+		}
+		
 //		try {
 //			dev.getBirthDate();
 //		} catch(Exception e) {
@@ -70,10 +76,20 @@ public class DeveloperService {
 		StringBuffer message = new StringBuffer();
 		
 		if(!devDao.isDeveloperIdExisting(skillAss.getDeveloper().getDeveloperId())) {
-			message.append("Unrecognised developer ID.\n");
-		}
+			message.append("Please provide a valid developer.\n");
+		} 
 		if(!skillDao.isSkillIdExisting(skillAss.getSkill().getSkillId())) {
-			message.append("Unrecognised skill ID.\n");
+			message.append("Please provide a valid skill.\n");
+		}
+		if(String.valueOf(skillAss.getSkillLevel()).isBlank()) {
+			message.append("Please provide a valid skill level.\n ");
+		}
+		if(String.valueOf(skillAss.getMonthsOfExperience()).equals("0") || skillAss.getMonthsOfExperience() < 0) {
+			message.append("Please provide a valid months of experience.\n");
+		}
+		
+		if(devDao.skillAlreadyExistToDeveloper(skillAss.getDeveloper().getDeveloperId(), skillAss.getSkill().getSkillId())) {
+			message.append("The developer already has the chosen skill.\n");
 		}
 		
 		if(message.length() <= 0) {
@@ -159,5 +175,27 @@ public class DeveloperService {
 	public String get4DigitRandom() {
 		Random random = new Random();
 		return String.format("%04d", random.nextInt(10000));
+	}
+	
+	public boolean isThisDateValid(String dateToValidate, String dateFromat){
+		
+		if(dateToValidate == null){
+			return false;
+		}
+		
+		SimpleDateFormat sdf = new SimpleDateFormat(dateFromat);
+		sdf.setLenient(false);
+		
+		try {
+			Date date = sdf.parse(dateToValidate);
+			System.out.println(date);
+		
+		} catch (ParseException e) {
+			
+			e.printStackTrace();
+			return false;
+		}
+		
+		return true;
 	}
 }

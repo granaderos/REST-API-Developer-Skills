@@ -13,7 +13,6 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 
 import com.devs.rest.domain.Developer;
-import com.devs.rest.domain.SkillAssessment;
 import com.devs.rest.service.DeveloperService;
 
 @Path("/developers")
