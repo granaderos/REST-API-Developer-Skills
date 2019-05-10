@@ -171,6 +171,31 @@ public class DeveloperDao {
 		return exist;
 	}
 	
+	public boolean doesDeveloperIdAlreadyExist(int developerId) {
+		boolean exist = false;
+		
+		String sql = "SELECT * FROM developers WHERE developerId = ?";
+
+		try (Connection conn = dbConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+
+			ps.setInt(1, developerId);
+			
+			ResultSet results = ps.executeQuery();
+
+			while (results.next()) {
+				exist = true;
+				break;
+			}
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+		
+		
+		return exist;
+	}
+	
 	public boolean updateSkillAssessment(SkillAssessment skillAss) {
 		boolean updated = false;
 		

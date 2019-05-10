@@ -23,11 +23,17 @@ public class DeveloperService {
 		skillDao = new SkillDao();
 	}
 	
-	public String addDeveloper(Developer dev) {
+	public HashMap<String, Object> addDeveloper(Developer dev) {
 		StringBuffer message = new StringBuffer();
 		
-		// generate developer Id
-		dev.setDeveloperId(getNewDevId());
+		// generate developer Id and check if it exists already
+		int newDevId = getNewDevId();
+		boolean exist = devDao.doesDeveloperIdAlreadyExist(newDevId);
+		while(exist) {
+			newDevId = this.getNewDevId();
+			exist = devDao.doesDeveloperIdAlreadyExist(newDevId);
+		}
+		dev.setDeveloperId(newDevId);
 		
 		if(dev.getFirstName().trim().length() <= 0) {
 			message.append("First name cannot be blank.\n");
@@ -47,29 +53,28 @@ public class DeveloperService {
 			message.append("Position cannot be blank.\n");
 		}  else if(dev.getPosition().length() < 2 
 				|| dev.getPosition().length() > 255) {
-			message.append("Position can only be 2 - 255 characters.");
+			message.append("Position can only be 2 - 255 characters. ");
 		}
 		
-		if(dev.getBirthDate() == null || isThisDateValid(dev.getBirthDate().toString(), "yyyy-mm-dd")) {
+		if(dev.getBirthDate() == null || !isThisDateValid(dev.getBirthDate().toString(), "yyyy-mm-dd")) {
 			message.append("Please provide a valid birth date.\n");
 		}
-		
-//		try {
-//			dev.getBirthDate();
-//		} catch(Exception e) {
-//			// meaning invalid date format
-//			message.append("Birth date must be in YYYY-MM-DD format.");
-//		}
-		
+		int status = 406;
 		if(message.length() <= 0) {
 			// meaning everything valid
 			Boolean added = devDao.addDeveloper(dev);
 			if(added) {
 				message.append("New developer has been successfully added.");
-			} else message.append("Something went wrong. Couldn't add developer.");
+				status = 200;
+			} else {
+				message.append("Something went wrong. Couldn't add developer.");
+			}
 		}
+		HashMap<String, Object> response = new HashMap<String, Object>();
+		response.put("code", status);
+		response.put("message", message.toString());
 		
-		return message.toString();
+		return response;
 	}
 	
 	public String addSkillAssessment(SkillAssessment skillAss) {
